@@ -54,13 +54,17 @@ On Linux, also sanity-check that `autoPatchelfHook` didn't leave unresolved depe
 
 ### 2.3. Updating to a new upstream version
 
-Upstream releases frequently (often daily). To bump:
+This is automated: `.github/workflows/update-omp.yml` runs `scripts/update-omp.sh` daily (and on `workflow_dispatch`), which checks the latest `can1357/oh-my-pi` release, rewrites `version` and the four per-platform `hash` fields in `pkgs/omp/default.nix` from that release's `SHA256SUMS.txt`, builds `omp` and checks its `--version` output (catches both hash mistakes and the §1.2 strip regression on `x86_64-linux`), then opens a PR for review. It does not auto-merge.
 
-1. Find the latest tag: `curl -sL https://api.github.com/repos/can1357/oh-my-pi/releases/latest | jq -r .tag_name`
-2. Fetch the `SHA256SUMS.txt` for that release and note the hex digests for `omp-linux-x64`, `omp-linux-arm64`, `omp-darwin-x64`, `omp-darwin-arm64`.
-3. Convert each hex digest to SRI form: `nix hash convert --hash-algo sha256 --to sri <hex>`
-4. Update `version` and the four `hash` fields in `pkgs/omp/default.nix`.
-5. Build and re-verify the version string per §1.2 above — this catches both hash mistakes and the strip regression in one step.
+To bump manually (e.g. to test the script, or if the workflow is broken):
+
+```bash
+./scripts/update-omp.sh   # requires curl, jq, nix, git
+nix build .#omp
+./result/bin/omp --version   # must print "omp/<version>"
+```
+
+Note the `aarch64-linux`/`aarch64-darwin` hashes are only ever validated against upstream's published `SHA256SUMS.txt`, never independently built in CI (no cross-arch runner) — a bad upload there would only surface as a build failure for those users, not in CI.
 
 ---
 
