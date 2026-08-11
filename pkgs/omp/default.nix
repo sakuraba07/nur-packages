@@ -65,5 +65,12 @@ stdenvNoCC.mkDerivation {
     platforms = builtins.attrNames sources;
     mainProgram = "omp";
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+    maintainers = [
+      {
+        name = "sakuraba07";
+        github = "sakuraba07";
+        githubId = 207140744;
+      }
+    ];
   };
 }
