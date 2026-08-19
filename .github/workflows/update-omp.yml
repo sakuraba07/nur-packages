@@ -39,8 +39,14 @@ jobs:
 
       - name: Open a pull request
         if: steps.update.outputs.changed == 'true'
+        id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
+          # A PAT is required (not the default GITHUB_TOKEN) so that opening this PR
+          # triggers nix-check.yml's `pull_request` event — GitHub does not cascade
+          # further workflow runs from events authored by the default GITHUB_TOKEN.
+          # See: https://github.com/peter-evans/create-pull-request/blob/main/docs/concepts-guidelines.md#triggering-further-workflow-runs
+          token: ${{ secrets.OMP_UPDATE_PAT }}
           commit-message: "chore: update omp to ${{ steps.update.outputs.new_version }}"
           title: "chore: update omp to ${{ steps.update.outputs.new_version }}"
           body: |
@@ -50,8 +56,14 @@ jobs:
             - `nix build .#omp` succeeded and `omp --version` reported the expected version string (rules out the known `strip`-corruption regression, see AGENTS.md §1.2).
             - Only the `x86_64-linux` build was actually run and smoke-tested on this runner; the `aarch64-linux`/`aarch64-darwin` hashes are trusted from upstream's published `SHA256SUMS.txt` but not independently built here.
 
-            Please review before merging.
+            This PR will auto-merge once the required `nix-check` status check passes.
           branch: update-omp
           labels: |
             dependencies
             automated
+
+      - name: Enable auto-merge
+        if: steps.update.outputs.changed == 'true' && steps.cpr.outputs.pull-request-number
+        run: gh pr merge --auto --merge "${{ steps.cpr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
